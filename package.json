@@ -1,0 +1,11 @@
+{
+  "name": "pgl-call-simulator",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "echo 'No build step needed'"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
