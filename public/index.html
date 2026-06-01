@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PGL Call Simulator — Marketing.Storage</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:    #0c0c0f;
+  --bg2:   #141417;
+  --bg3:   #1c1c21;
+  --bg4:   #242429;
+  --bg5:   #2e2e35;
+  --b:     rgba(255,255,255,0.07);
+  --b2:    rgba(255,255,255,0.13);
+  --b3:    rgba(255,255,255,0.20);
+  --txt:   #eeedf2;
+  --txt2:  #8e8d9a;
+  --txt3:  #55545f;
+  --blue:  #4f8ef7;
+  --blue2: #2563eb;
+  --bdim:  rgba(79,142,247,0.13);
+  --green: #22d47a;
+  --amber: #f5a623;
+  --red:   #f05252;
+  --r: 10px; --rsm: 7px; --rxs: 5px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--txt); overflow: hidden; }
+body { font-family: -apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; }
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--bg5); border-radius: 99px; }
+
+/* ── SCREENS ── */
+.screen { display: none; flex-direction: column; height: 100vh; width: 100%; }
+.screen.active { display: flex; }
+
+/* ═══════════════════════════════════════════════════
+   SETUP
+═══════════════════════════════════════════════════ */
+#setup { overflow-y: auto; align-items: center; padding: 44px 20px 80px; gap: 20px; }
+
+.brand { text-align: center; margin-bottom: 4px; }
+.brand-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--b2);
+  border-radius: 99px; padding: 5px 14px; margin-bottom: 16px;
+}
+.brand-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
+.brand-name { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--txt2); }
+.brand h1 { font-size: 28px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 6px; }
+.brand p  { font-size: 14px; color: var(--txt2); }
+
+.card {
+  width: 100%; max-width: 720px;
+  background: var(--bg2); border: 1px solid var(--b);
+  border-radius: var(--r); overflow: hidden;
+}
+.card-head {
+  padding: 13px 18px; border-bottom: 1px solid var(--b);
+  display: flex; align-items: center; gap: 10px;
+}
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  background: var(--bg4); border: 1px solid var(--b2); color: var(--txt3);
+  transition: all .2s;
+}
+.step-num.done { background: var(--bdim); border-color: var(--blue); color: var(--blue); }
+.card-title { font-size: 13px; font-weight: 600; }
+.card-note  { font-size: 12px; color: var(--txt3); margin-left: auto; }
+.card-body  { padding: 14px; }
+
+/* Tier grid */
+.tier-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.tile {
+  border: 1px solid var(--b2); border-radius: var(--rsm);
+  padding: 14px; cursor: pointer; transition: all .15s; background: var(--bg3);
+}
+.tile:hover  { border-color: var(--b3); background: var(--bg4); }
+.tile.sel    { border-color: var(--blue); background: var(--bdim); }
+.badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .05em;
+  padding: 3px 9px; border-radius: 99px; display: inline-block; margin-bottom: 10px;
+}
+.t1 .badge { background: rgba(79,142,247,.18); color: #93c5fd; }
+.t2 .badge { background: rgba(34,212,122,.18); color: #6ee7b7; }
+.t3 .badge { background: rgba(245,166,35,.18); color: #fcd34d; }
+.tile-name { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+.tile-desc { font-size: 12px; color: var(--txt2); line-height: 1.45; margin-bottom: 8px; }
+.tile-meta { font-size: 11px; color: var(--txt3); border-top: 1px solid var(--b); padding-top: 8px; }
+
+/* Partner grid */
+.partner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ptile {
+  border: 1px solid var(--b2); border-radius: var(--rsm);
+  padding: 11px 13px; cursor: pointer; transition: all .15s;
+  background: var(--bg3); display: flex; align-items: center; gap: 11px;
+}
+.ptile:hover { border-color: var(--b3); background: var(--bg4); }
+.ptile.sel   { border-color: var(--blue); background: var(--bdim); }
+.av {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; flex-shrink: 0;
+}
+.pname { font-size: 13px; font-weight: 600; }
+.prole { font-size: 11.5px; color: var(--txt2); margin-top: 2px; }
+
+/* Context grid */
+.ctx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ctile {
+  border: 1px solid var(--b2); border-radius: var(--rsm);
+  padding: 13px; cursor: pointer; transition: all .15s; background: var(--bg3);
+}
+.ctile:hover { border-color: var(--b3); background: var(--bg4); }
+.ctile.sel   { border-color: var(--blue); background: var(--bdim); }
+.ctx-label { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.ctx-desc  { font-size: 12px; color: var(--txt2); line-height: 1.4; }
+
+/* Voice toggles in setup */
+.vtile {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg3); border: 1px solid var(--b);
+  border-radius: var(--rsm); padding: 12px 14px; cursor: pointer;
+}
+.vtile + .vtile { margin-top: 8px; }
+.vtile-text { flex: 1; }
+.vtile-label { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.vtile-sub   { font-size: 12px; color: var(--txt2); line-height: 1.4; }
+
+/* Toggle switch */
+.tog {
+  width: 40px; height: 22px; border-radius: 99px; flex-shrink: 0;
+  background: var(--bg5); border: 1px solid var(--b2);
+  position: relative; transition: all .2s; cursor: pointer;
+}
+.tog.on { background: var(--blue); border-color: var(--blue); }
+.tog::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.tog.on::after { transform: translateX(18px); }
+.tog.sm { width: 32px; height: 18px; }
+.tog.sm::after { width: 12px; height: 12px; top: 2px; left: 2px; }
+.tog.sm.on::after { transform: translateX(14px); }
+
+.start-wrap { text-align: center; padding-top: 4px; }
+.start-btn {
+  background: var(--blue); color: #fff; border: none;
+  border-radius: var(--rsm); padding: 13px 48px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all .15s; letter-spacing: -.2px;
+  box-shadow: 0 0 0 0 rgba(79,142,247,.4);
+}
+.start-btn:hover { background: var(--blue2); box-shadow: 0 0 24px rgba(79,142,247,.3); }
+
+/* ═══════════════════════════════════════════════════
+   CALL SCREEN
+═══════════════════════════════════════════════════ */
+#call { background: var(--bg); }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--b);
+  background: var(--bg2); flex-shrink: 0; gap: 12px;
+}
+.topbar-left  { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.topbar-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red); flex-shrink: 0;
+  animation: livepulse 2s ease-in-out infinite;
+}
+.call-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.call-sub  { font-size: 11px; color: var(--txt3); margin-top: 1px; }
+
+.divider { width: 1px; height: 18px; background: var(--b2); }
+
+/* Voice toggles in topbar */
+.vtog-row {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg3); border: 1px solid var(--b);
+  border-radius: var(--rxs); padding: 5px 9px;
+}
+.vtog-label { font-size: 11px; color: var(--txt2); }
+
+/* Header buttons */
+.hbtn {
+  background: var(--bg3); border: 1px solid var(--b);
+  border-radius: var(--rxs); color: var(--txt2);
+  padding: 5px 10px; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.hbtn:hover { background: var(--bg4); color: var(--txt); border-color: var(--b2); }
+.hbtn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.end-btn {
+  background: rgba(240,82,82,.1); border: 1px solid rgba(240,82,82,.22);
+  color: #fca5a5; border-radius: var(--rxs);
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.end-btn:hover { background: rgba(240,82,82,.2); }
+
+/* Chat */
+.chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.msg { display: flex; flex-direction: column; gap: 3px; max-width: 78%; }
+.msg.partner { align-self: flex-start; }
+.msg.pgl     { align-self: flex-end; }
+.msg.sys, .msg.hint { align-self: center; max-width: 94%; }
+.msg-from {
+  font-size: 10px; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--txt3);
+}
+.msg.pgl .msg-from { text-align: right; }
+.bubble {
+  padding: 9px 13px; border-radius: 13px;
+  font-size: 13.5px; line-height: 1.58; color: var(--txt);
+}
+.msg.partner .bubble {
+  background: var(--bg3); border: 1px solid var(--b);
+  border-radius: 3px 13px 13px 13px;
+}
+.msg.pgl .bubble {
+  background: var(--blue); color: #fff;
+  border-radius: 13px 3px 13px 13px;
+}
+.msg.sys .bubble {
+  background: var(--bg3); border: 1px solid var(--b2);
+  border-radius: var(--rsm); font-size: 12.5px; color: var(--txt2); line-height: 1.6;
+}
+.msg.hint .bubble {
+  background: rgba(245,166,35,.08); border: 1px solid rgba(245,166,35,.22);
+  color: #fcd34d; font-size: 12.5px; border-radius: var(--rsm); line-height: 1.55;
+}
+
+/* Speak button under partner bubbles */
+.speak-btn {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; padding: 3px 0;
+  color: var(--txt3); transition: color .15s;
+}
+.speak-btn:hover { color: var(--green); }
+.speak-btn.playing { color: var(--green); }
+
+/* Typing dots */
+.typing-wrap { display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
+.typing-bubble {
+  background: var(--bg3); border: 1px solid var(--b);
+  border-radius: 3px 13px 13px 13px;
+  padding: 11px 15px; display: flex; gap: 5px; align-items: center;
+}
+.dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--txt3);
+  animation: dp 1.4s ease-in-out infinite;
+}
+.dot:nth-child(2) { animation-delay: .22s; }
+.dot:nth-child(3) { animation-delay: .44s; }
+
+/* Voice bar */
+.vbar {
+  flex-shrink: 0; border-top: 1px solid var(--b);
+  background: var(--bg2); padding: 12px 16px;
+}
+.vwarn {
+  background: rgba(245,166,35,.08); border: 1px solid rgba(245,166,35,.2);
+  border-radius: var(--rxs); padding: 8px 12px;
+  font-size: 12px; color: #fcd34d; margin-bottom: 10px; display: none;
+}
+.vstatus { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.sdot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--txt3); flex-shrink: 0; transition: background .3s;
+}
+.sdot.listening { background: var(--green); animation: sglow 1.4s ease-in-out infinite; }
+.sdot.speaking  { background: var(--blue);  animation: bglow 1.1s ease-in-out infinite; }
+.sdot.thinking  { background: var(--amber); animation: aglow  .9s ease-in-out infinite; }
+.stext  { font-size: 12px; color: var(--txt2); flex: 1; }
+.strans { font-size: 11.5px; color: var(--txt3); font-style: italic; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Waveform */
+.waveform { display: flex; align-items: center; gap: 2px; height: 26px; margin-bottom: 10px; }
+.wb { flex: 1; border-radius: 99px; background: var(--bg5); height: 3px; transition: height .07s, background .1s; }
+
+/* Controls row */
+.controls { display: flex; gap: 9px; align-items: center; }
+.mic-btn {
+  width: 50px; height: 50px; border-radius: 50%; border: none;
+  background: var(--blue); color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0;
+}
+.mic-btn:hover  { background: var(--blue2); transform: scale(1.04); }
+.mic-btn.active { background: var(--red); animation: mpulse 1.5s ease-in-out infinite; }
+.mic-btn.off    { background: var(--bg4); opacity: .4; cursor: not-allowed; transform: none; }
+.mic-btn svg { width: 20px; height: 20px; }
+
+.text-wrap { flex: 1; display: flex; gap: 7px; }
+.tinput {
+  flex: 1; background: var(--bg3); border: 1px solid var(--b);
+  border-radius: var(--rxs); padding: 9px 12px;
+  font-size: 13px; color: var(--txt); font-family: inherit;
+  outline: none; resize: none; height: 40px; line-height: 1.4;
+  transition: border-color .15s;
+}
+.tinput:focus { border-color: var(--blue); }
+.tinput::placeholder { color: var(--txt3); }
+.send-btn {
+  background: var(--bg3); border: 1px solid var(--b);
+  border-radius: var(--rxs); color: var(--txt2); padding: 9px 13px;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center;
+  gap: 5px; font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.send-btn:hover { background: var(--bg4); color: var(--txt); border-color: var(--b2); }
+.send-btn svg { width: 12px; height: 12px; }
+
+/* ═══════════════════════════════════════════════════
+   DEBRIEF
+═══════════════════════════════════════════════════ */
+#debrief { overflow-y: auto; align-items: center; padding: 40px 20px 80px; gap: 18px; background: var(--bg); }
+.d-inner { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
+
+.score-ring {
+  width: 90px; height: 90px; border-radius: 50%;
+  border: 2.5px solid var(--blue); background: var(--bdim);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+  box-shadow: 0 0 40px rgba(79,142,247,.15);
+}
+.score-num  { font-size: 28px; font-weight: 800; color: #93c5fd; letter-spacing: -1px; }
+.d-title    { font-size: 18px; font-weight: 700; letter-spacing: -.3px; margin-bottom: 5px; text-align: center; }
+.d-sub      { font-size: 12.5px; color: var(--txt2); text-align: center; }
+
+.fb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fb-card {
+  background: var(--bg2); border: 1px solid var(--b);
+  border-radius: var(--r); padding: 14px;
+}
+.fb-card.wins  { border-left: 3px solid var(--green); }
+.fb-card.grows { border-left: 3px solid var(--amber); }
+.fb-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.fb-card.wins  .fb-title { color: #6ee7b7; }
+.fb-card.grows .fb-title { color: #fcd34d; }
+.fb-item {
+  font-size: 12.5px; color: var(--txt2); padding: 7px 0;
+  border-bottom: 1px solid var(--b); line-height: 1.5;
+}
+.fb-item:last-child { border-bottom: none; }
+
+.ts-card { background: var(--bg2); border: 1px solid var(--b); border-radius: var(--r); padding: 14px; }
+.ts-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--txt3); margin-bottom: 10px; }
+.ts-scroll { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.tline { font-size: 12px; color: var(--txt2); line-height: 1.5; }
+.tline strong { color: var(--txt); }
+
+.d-btns { display: flex; gap: 10px; justify-content: center; }
+.d-btn {
+  background: var(--bg2); border: 1px solid var(--b2);
+  border-radius: var(--rsm); padding: 10px 24px;
+  font-size: 13.5px; font-weight: 500; cursor: pointer; color: var(--txt); transition: all .15s;
+}
+.d-btn:hover { background: var(--bg3); }
+.d-btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.d-btn.primary:hover { background: var(--blue2); }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--bg4); border: 1px solid var(--b2);
+  border-radius: var(--rsm); padding: 8px 18px;
+  font-size: 12.5px; color: var(--txt2); transition: transform .22s;
+  z-index: 999; pointer-events: none; white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Animations ── */
+@keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes dp { 0%,60%,100%{opacity:.3;transform:scale(1)} 30%{opacity:1;transform:scale(1.3)} }
+@keyframes sglow { 0%,100%{box-shadow:0 0 0 0 rgba(34,212,122,.5)} 50%{box-shadow:0 0 0 7px rgba(34,212,122,0)} }
+@keyframes bglow { 0%,100%{box-shadow:0 0 0 0 rgba(79,142,247,.5)}  50%{box-shadow:0 0 0 7px rgba(79,142,247,0)} }
+@keyframes aglow { 0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.5)}  50%{box-shadow:0 0 0 7px rgba(245,166,35,0)} }
+@keyframes mpulse { 0%,100%{box-shadow:0 0 0 0 rgba(240,82,82,.5)}  50%{box-shadow:0 0 0 12px rgba(240,82,82,0)} }
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP ══════════════════════════════════════════════════════════ -->
+<div id="setup" class="screen active">
+  <div class="brand">
+    <div class="brand-pill"><div class="brand-dot"></div><span class="brand-name">Marketing.Storage</span></div>
+    <h1>Partner Call Simulator</h1>
+    <p>Practice real partner conversations. Get scored. Get better.</p>
+  </div>
+
+  <!-- Step 1: Tier -->
+  <div class="card">
+    <div class="card-head">
+      <div class="step-num" id="sn1">1</div>
+      <span class="card-title">Select partner tier</span>
+    </div>
+    <div class="card-body">
+      <div class="tier-grid">
+        <div class="tile t1" onclick="pickTier(1,this)">
+          <span class="badge">Tier 1</span>
+          <div class="tile-name">Enterprise</div>
+          <div class="tile-desc">Third-party manager, 100+ facilities, corporate team reporting to ownership.</div>
+          <div class="tile-meta">Expects proactive strategy & industry benchmarks</div>
+        </div>
+        <div class="tile t2" onclick="pickTier(2,this)">
+          <span class="badge">Tier 2</span>
+          <div class="tile-name">Growing operator</div>
+          <div class="tile-desc">Owner managing ~10 facilities. Strategic but relies on your guidance.</div>
+          <div class="tile-meta">ROI-focused, wants clear action items per location</div>
+        </div>
+        <div class="tile t3" onclick="pickTier(3,this)">
+          <span class="badge">Tier 3</span>
+          <div class="tile-name">Small operator</div>
+          <div class="tile-desc">Single facility owner. Hands-on, price-sensitive, limited marketing knowledge.</div>
+          <div class="tile-meta">Needs plain language — no jargon</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Partner -->
+  <div class="card" id="s2" style="display:none">
+    <div class="card-head">
+      <div class="step-num" id="sn2">2</div>
+      <span class="card-title">Choose a partner</span>
+    </div>
+    <div class="card-body">
+      <div class="partner-grid" id="partner-grid"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Context -->
+  <div class="card" id="s3" style="display:none">
+    <div class="card-head">
+      <div class="step-num" id="sn3">3</div>
+      <span class="card-title">Call context</span>
+    </div>
+    <div class="card-body">
+      <div class="ctx-grid">
+        <div class="ctile" onclick="pickCtx('monthly',this)">
+          <div class="ctx-label">📊 Monthly review</div>
+          <div class="ctx-desc">Walk through PPC & SEO results. Explain performance, flag issues, show value.</div>
+        </div>
+        <div class="ctile" onclick="pickCtx('objection',this)">
+          <div class="ctx-label">⚡ Tough conversation</div>
+          <div class="ctx-desc">Partner is frustrated or questioning spend. Handle objections confidently.</div>
+        </div>
+        <div class="ctile" onclick="pickCtx('strategy',this)">
+          <div class="ctx-label">🎯 Strategy session</div>
+          <div class="ctx-desc">Q2 planning, expansion into new markets, optimizing current approach.</div>
+        </div>
+        <div class="ctile" onclick="pickCtx('onboarding',this)">
+          <div class="ctx-label">👋 Onboarding call</div>
+          <div class="ctx-desc">New partner. Set expectations, explain your approach, build trust from day one.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Voice -->
+  <div class="card" id="s4" style="display:none">
+    <div class="card-head">
+      <div class="step-num" id="sn4">4</div>
+      <span class="card-title">Voice settings</span>
+      <span class="card-note">Adjustable during the call</span>
+    </div>
+    <div class="card-body">
+      <div class="vtile" onclick="toggleSetupMic()">
+        <div class="vtile-text">
+          <div class="vtile-label">🎙️ Microphone — speak your responses</div>
+          <div class="vtile-sub">Click the mic button during the call to start/stop listening. Works in Chrome and Edge.</div>
+        </div>
+        <div class="tog on" id="setup-mic-tog"></div>
+      </div>
+      <div class="vtile" onclick="toggleSetupTts()">
+        <div class="vtile-text">
+          <div class="vtile-label">🔊 Partner speaks back — text to speech</div>
+          <div class="vtile-sub">Each partner response shows a ▶ Play button. Click it to hear the response read aloud.</div>
+        </div>
+        <div class="tog on" id="setup-tts-tog"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="start-wrap" id="s5" style="display:none">
+    <button class="start-btn" onclick="startCall()">Start call →</button>
+  </div>
+</div>
+
+<!-- ══ CALL ═══════════════════════════════════════════════════════════ -->
+<div id="call" class="screen">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="live-dot"></div>
+      <div class="av" id="call-av" style="width:34px;height:34px;font-size:12px"></div>
+      <div>
+        <div class="call-name" id="call-name"></div>
+        <div class="call-sub"  id="call-ctx"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <!-- Live mic toggle -->
+      <div class="vtog-row">
+        <div class="tog sm on" id="call-mic-tog" onclick="toggleCallMic()"></div>
+        <span class="vtog-label">Mic</span>
+      </div>
+      <!-- Live TTS toggle -->
+      <div class="vtog-row">
+        <div class="tog sm on" id="call-tts-tog" onclick="toggleCallTts()"></div>
+        <span class="vtog-label">Partner voice</span>
+      </div>
+      <div class="divider"></div>
+      <button class="hbtn" onclick="showReport()">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Report
+      </button>
+      <button class="hbtn" onclick="getHint()">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        Hint
+      </button>
+      <button class="end-btn" onclick="endCall()">End call & debrief</button>
+    </div>
+  </div>
+
+  <div class="chat" id="chat"></div>
+
+  <div class="vbar">
+    <div class="vwarn" id="vwarn"></div>
+    <div class="vstatus">
+      <div class="sdot" id="sdot"></div>
+      <span class="stext"  id="stext">Initializing…</span>
+      <span class="strans" id="strans"></span>
+    </div>
+    <div class="waveform" id="waveform"></div>
+    <div class="controls">
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Click to speak">
+        <svg id="mic-icon-on"  fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+        <svg id="mic-icon-off" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6M17 16.95A7 7 0 015 12v-2m14 0v2a7 7 0 01-.11 1.23M12 19v4M8 23h8"/></svg>
+      </button>
+      <div class="text-wrap">
+        <textarea class="tinput" id="tinput" placeholder="Or type here and press Enter…" onkeydown="handleKey(event)" rows="1"></textarea>
+        <button class="send-btn" onclick="sendText()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DEBRIEF ════════════════════════════════════════════════════════ -->
+<div id="debrief" class="screen">
+  <div class="d-inner">
+    <div style="text-align:center">
+      <div class="score-ring"><span class="score-num" id="d-score">…</span></div>
+      <div class="d-title" id="d-title">Analyzing your call…</div>
+      <div class="d-sub"   id="d-sub">Please wait a moment</div>
+    </div>
+    <div class="fb-grid">
+      <div class="fb-card wins">
+        <div class="fb-title">✓ What you did well</div>
+        <div id="wins-list"><div class="fb-item">Generating…</div></div>
+      </div>
+      <div class="fb-card grows">
+        <div class="fb-title">→ Areas to improve</div>
+        <div id="grows-list"><div class="fb-item">Generating…</div></div>
+      </div>
+    </div>
+    <div class="ts-card">
+      <div class="ts-title">Call transcript</div>
+      <div class="ts-scroll" id="ts-scroll"></div>
+    </div>
+    <div class="d-btns">
+      <button class="d-btn" onclick="retry()">↩ Try again — same partner</button>
+      <button class="d-btn primary" onclick="newSetup()">New call setup</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+const REPORT = {
+  ppc: { clicks:2109, ctr:'2.57%', ctrChg:58.1, cost:'$15,218', costChg:17.1,
+         cpr:'$228.51', cprChg:-17, rentals:66.6, rentalsChg:41.1,
+         revenue:'$99,895', roas:'656%', roasChg:20.5,
+         onlineRentals:27, onlineChg:93, missedCalls:106, totalCalls:240,
+         impressions:82211, impressionsChg:-31 },
+  seo: { roi:'926%', revenue:'$96,000', rentals:64, rentalsChg:49,
+         rankings:236, rankingsChg:18, sessions:4960, sessionsChg:158 },
+  locs: [
+    {n:'Settlers Landing', roas:'1,189%', cpr:'$126', rentals:4.93},
+    {n:'Knightdale City',  roas:'881%',   cpr:'$170', rentals:10.61},
+    {n:'Chapel Hill',     roas:'711%',   cpr:'$211', rentals:3.15},
+    {n:'Pittsboro City',  roas:'578%',   cpr:'$259', rentals:8.16},
+    {n:'Sanford',         roas:'560%',   cpr:'$268', rentals:6.63},
+    {n:'Concord',         roas:'556%',   cpr:'$270', rentals:4.65},
+    {n:'High Point City', roas:'484%',   cpr:'$310', rentals:6.05},
+    {n:'Fuquay-Varina',   roas:'236%',   cpr:'$634', rentals:0.83},
+  ]
+};
+
+const PARTNERS = {
+  1:[
+    {id:'sc',name:'Sarah Chen',   init:'SC', role:'VP of Operations',    co:'StorageMax Group',    bg:'#162037',fg:'#93c5fd',
+     p:`You are Sarah Chen, VP of Operations at StorageMax Group (140+ facilities). Strategic, data-driven, report to facility owners and board. You've worked with multiple vendors. Expect proactive insights — not just a report recap. Benchmark against industry standards. Zero patience for vague answers. Good specific answer → acknowledge briefly, then probe deeper. Vague answer → press directly.`},
+    {id:'mw',name:'Marcus Webb',  init:'MW', role:'Director of Marketing', co:'Premier Storage Co.',  bg:'#0f2218',fg:'#6ee7b7',
+     p:`You are Marcus Webb, Director of Marketing at Premier Storage Co. (85 facilities). Sophisticated about marketing — channel strategy, attribution, testing. Want your partner bringing new ideas. Ask about Performance Max, channel mix, A/B testing, competitive positioning. Textbook answer → push deeper. Collegial but high-standards.`},
+  ],
+  2:[
+    {id:'df',name:'Diane Foster', init:'DF', role:'Owner / Operator',    co:'Foster Storage Group', bg:'#221606',fg:'#fcd34d',
+     p:`You are Diane Foster, owner of Foster Storage Group (9 NC locations). Practical, results-oriented. Understand marketing at a reasonable level but rely on your partner to connect tactics to outcomes. Care about which locations perform and which need attention. Ask about ROI, lead quality, whether money is in the right places. Friendly but businesslike.`},
+    {id:'tr',name:'Tom Ruiz',     init:'TR', role:'Regional Manager',    co:'Cornerstone Storage',  bg:'#120f24',fg:'#c084fc',
+     p:`You are Tom Ruiz, Regional Manager at Cornerstone Storage (12 locations). Efficiency-focused — want clear action items every call. Dislike status updates without direction. Care most about which locations need attention and what's being done. Skeptical when things sound like excuses. Want confidence marketing is managed proactively, not reactively.`},
+  ],
+  3:[
+    {id:'lp',name:'Linda Park',   init:'LP', role:'Owner',               co:"Park's Self Storage",  bg:'#1f0a0a',fg:'#fca5a5',
+     p:`You are Linda Park, owner of Park's Self Storage (single facility, Sanford NC). Warm but skeptical about spend. Don't fully understand digital marketing — when someone uses jargon like ROAS, CTR, or organic search without explaining, ask what it means in plain terms. Always thinking whether money comes back as actual customers. Ask simple direct questions.`},
+    {id:'gs',name:'Gary Simmons', init:'GS', role:'Owner',               co:'Simmons Storage',      bg:'#111113',fg:'#d1d5db',
+     p:`You are Gary Simmons, owner of Simmons Storage (single facility, 14 years). Blunt, no-nonsense, deeply skeptical of marketing spend. Built business on word of mouth. Compare everything to simpler approaches. Want bottom-line numbers — rentals in the door. Cut off long-winded answers. Short, direct, sometimes gruff.`},
+  ]
+};
+
+const CTXS = {monthly:'Monthly review',objection:'Tough conversation',strategy:'Strategy session',onboarding:'Onboarding call'};
+
+const FOLLOWUPS = {
+  1:['What is our competitive position in markets where we are not ranking top three?','How are you thinking about Performance Max versus Search going forward?','Cost per rental dropped 17 percent — what specifically drove that?','What would you recommend we test in Q2 that we have not tried yet?','106 missed calls is a real revenue problem. What is the plan to fix it?','How does our ROAS compare to your other clients in this industry?'],
+  2:['What is going on with Fuquay-Varina? Those numbers look really weak.','We are spending $15,000 a month — where exactly is that money going?','Which locations should we shift budget toward if we had room?','SEO rankings went up 18 percent — what changed to make that happen?','What does 106 missed calls actually cost us in lost revenue?','How long before SEO work shows up in actual rentals?'],
+  3:['This $228 cost per rental — is that good? How would I even know?','Why do some months get way more customers than others?','My impressions went down 31 percent. Is that bad? It sounds bad.','What exactly is SEO and can you prove it is actually doing something?','My neighbor just runs Facebook ads for his storage place. Why are we not doing that?','Is there any way to spend less money and still get the same results?']
+};
+
+function getOpener(tier, ctx) {
+  return ({
+    monthly:{
+      1:"Hi, thanks for jumping on. I looked at the numbers ahead of this — ROAS at 656 percent looks solid overall, but I am seeing real variance across locations and I want to understand the story behind it. Walk me through what is driving the top performers versus the ones falling short.",
+      2:"Hey, good to connect. I had a chance to glance at the report before we got on. Overall it looks okay but I have some questions. Can you give me a quick overview of last month and flag anything I should be paying attention to?",
+      3:"Hi there. I got that report email but honestly there are a lot of numbers in there and I am not sure what I am looking at. Can you just tell me straight — did last month go well? Are the ads actually getting me customers?",
+    },
+    objection:{
+      1:"I am going to get right to it. We have ranking drops in key markets — Clayton is down significantly and Chapel Hill slipped too. My facility owners are asking questions and I need specific answers, not we are working on it. What happened and what is the actual plan?",
+      2:"I need to talk about Fuquay-Varina. The ROAS there is only 236 percent — way below every other location. I am seriously considering cutting that budget or moving it somewhere that actually performs. What is your take?",
+      3:"I am going to be straight with you — I am not sure this is working the way I hoped. I am paying a lot of money every month and I just do not feel it. A friend of mine with a storage place just puts a sign out and does a couple Facebook posts. Why am I spending all this?",
+    },
+    strategy:{
+      1:"We are heading into Q2 planning and I want to be intentional. I see markets where we are not in the top three organically — Durham, High Point, Chapel Hill — and I want a real plan. Where do we double down, what are we not fully using, and how are we thinking about competitive pressure in those markets?",
+      2:"We are looking at adding two or three locations this year. I want our marketing to be ready to support that growth. How do we launch a new market the right way, and is there anything we should be doing differently right now to prepare?",
+      3:"My lease comes up in six months and I have been thinking about maybe opening a second place. But I want to make sure this one is really solid before I do anything. Where do you think I should be focused right now?",
+    },
+    onboarding:{
+      1:"Thanks for getting this on the calendar. We have managed a few vendor relationships over the years so I want to make sure we are aligned from day one — reporting cadence, how decisions get made, what good looks like. Walk me through how you would approach an account our size.",
+      2:"Hi, really glad to be getting started. We have 9 locations and our marketing has been pretty scattered honestly — no real strategy behind it. I am hoping you can get us organized and drive more consistent rentals. Where do we begin?",
+      3:"Hi there. My daughter helped me set this whole thing up. She says I need to do more internet marketing. I do not know much about this stuff but I know I need more customers coming through the door. So what are you going to do for me?",
+    },
+  })[ctx]?.[tier] ?? "Thanks for joining. Let us get started.";
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const S = {
+  tier:null, pid:null, ctx:null, useMic:true, useTts:true,
+  msgs:[], turns:0, pool:[], busy:false,
+  recog:null, recogOn:false, wavTimer:null
+};
+
+// ─── SETUP ────────────────────────────────────────────────────────────────────
+function pickTier(t, el) {
+  S.tier=t; S.pid=null; S.ctx=null;
+  qa('.tile').forEach(c=>c.classList.remove('sel')); el.classList.add('sel');
+  q('sn1').classList.add('done');
+  const g = q('partner-grid'); g.innerHTML='';
+  PARTNERS[t].forEach(p=>{
+    g.innerHTML += `<div class="ptile" data-id="${p.id}" onclick="pickPartner('${p.id}',this)">
+      <div class="av" style="width:38px;height:38px;font-size:13px;background:${p.bg};color:${p.fg}">${p.init}</div>
+      <div><div class="pname">${p.name}</div><div class="prole">${p.role} · ${p.co}</div></div>
+    </div>`;
+  });
+  show('s2'); hide('s3'); hide('s4'); hide('s5');
+}
+
+function pickPartner(id, el) {
+  S.pid=id; S.ctx=null;
+  qa('.ptile').forEach(c=>c.classList.remove('sel')); el.classList.add('sel');
+  q('sn2').classList.add('done');
+  show('s3'); hide('s4'); hide('s5');
+}
+
+function pickCtx(ctx, el) {
+  S.ctx=ctx;
+  qa('.ctile').forEach(c=>c.classList.remove('sel')); el.classList.add('sel');
+  q('sn3').classList.add('done');
+  show('s4'); show('s5');
+}
+
+function toggleSetupMic() { S.useMic=!S.useMic; q('setup-mic-tog').classList.toggle('on',S.useMic); }
+function toggleSetupTts() { S.useTts=!S.useTts; q('setup-tts-tog').classList.toggle('on',S.useTts); }
+
+// ─── START CALL ───────────────────────────────────────────────────────────────
+function gp() { return PARTNERS[S.tier].find(p=>p.id===S.pid); }
+
+function startCall() {
+  const p = gp(); if(!p) return;
+  S.msgs=[]; S.turns=0; S.busy=false;
+  S.pool = shuffle([...FOLLOWUPS[S.tier]]);
+
+  const av = q('call-av');
+  av.textContent=p.init; av.style.background=p.bg; av.style.color=p.fg;
+  q('call-name').textContent = `${p.name} · ${p.co}`;
+  q('call-ctx').textContent  = CTXS[S.ctx];
+  q('chat').innerHTML = '';
+
+  // Sync topbar toggles
+  q('call-mic-tog').classList.toggle('on', S.useMic);
+  q('call-tts-tog').classList.toggle('on', S.useTts);
+
+  showScreen('call');
+  buildWave();
+
+  if(S.useMic) initRecog();
+  else { q('mic-btn').classList.add('off'); setStatus('ready','Type your response below'); }
+
+  setTimeout(()=>{
+    const opener = getOpener(S.tier, S.ctx);
+    addMsg('partner', p.name, opener);
+    setStatus('ready', S.useMic ? 'Ready — click the mic button to speak' : 'Ready — type your response');
+  }, 400);
+}
+
+// ─── SPEECH RECOGNITION ──────────────────────────────────────────────────────
+function initRecog() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) {
+    showWarn('Microphone not supported in this browser. Use Chrome or Edge for voice, or type below.');
+    q('mic-btn').classList.add('off');
+    setStatus('ready','Type your response below');
+    return;
+  }
+  const r = new SR();
+  r.continuous=false; r.interimResults=true; r.lang='en-US';
+
+  r.onstart = ()=>{ S.recogOn=true; q('mic-btn').classList.add('active'); startWave(); setStatus('listening','Listening — speak now'); q('mic-icon-on').style.display='none'; q('mic-icon-off').style.display='block'; };
+  r.onresult = (e)=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    q('strans').textContent = (final||interim).slice(-55);
+    if(final.trim()){ q('strans').textContent=''; processInput(final.trim()); }
+  };
+  r.onerror = (e)=>{
+    S.recogOn=false; q('mic-btn').classList.remove('active'); stopWave();
+    q('mic-icon-on').style.display='block'; q('mic-icon-off').style.display='none';
+    if(e.error==='not-allowed') showWarn('Microphone blocked. Click the lock/mic icon in your browser address bar, allow microphone access for this site, then reload the page.');
+    if(!S.busy) setStatus('ready','Ready — click the mic to speak');
+  };
+  r.onend = ()=>{
+    S.recogOn=false; q('mic-btn').classList.remove('active'); stopWave();
+    q('mic-icon-on').style.display='block'; q('mic-icon-off').style.display='none';
+    if(!S.busy) setStatus('ready','Ready — click the mic to speak');
+  };
+  S.recog = r;
+  setStatus('ready','Ready — click the mic button to speak');
+}
+
+function toggleMic() {
+  if(!S.useMic || S.busy) return;
+  if(!S.recog){ initRecog(); return; }
+  window.speechSynthesis?.cancel();
+  if(S.recogOn){ try{S.recog.stop();}catch(e){} }
+  else {
+    try{ S.recog.start(); }
+    catch(e){
+      try{S.recog.stop();}catch(e2){}
+      setTimeout(()=>{ try{S.recog.start();}catch(e3){} },250);
+    }
+  }
+}
+
+function toggleCallMic() {
+  S.useMic = !S.useMic;
+  q('call-mic-tog').classList.toggle('on', S.useMic);
+  if(!S.useMic){
+    if(S.recogOn) try{S.recog.stop();}catch(e){}
+    q('mic-btn').classList.add('off');
+    setStatus('ready','Mic off — type your response');
+  } else {
+    q('mic-btn').classList.remove('off');
+    initRecog();
+    setStatus('ready','Ready — click the mic to speak');
+  }
+}
+
+function toggleCallTts() {
+  S.useTts = !S.useTts;
+  q('call-tts-tog').classList.toggle('on', S.useTts);
+  if(!S.useTts) window.speechSynthesis?.cancel();
+}
+
+// ─── PROCESS INPUT ────────────────────────────────────────────────────────────
+async function processInput(text) {
+  if(!text||S.busy) return;
+  S.busy=true;
+  window.speechSynthesis?.cancel();
+  if(S.recogOn) try{S.recog.stop();}catch(e){}
+
+  addMsg('pgl','You (PGL)',text);
+  S.turns++;
+  setTyping(true);
+  setStatus('thinking','Partner is thinking…');
+  q('mic-btn').disabled=true;
+
+  const p   = gp();
+  const recent = S.msgs.slice(-8).filter(m=>m.type==='pgl'||m.type==='partner').map(m=>`${m.sender}: ${m.text}`).join('\n');
+  const inject = (S.turns%2===0 && S.pool.length>0) ? S.pool.shift() : null;
+
+  const system = `${p.p}
+
+You are on a ${CTXS[S.ctx]} call with a Marketing.Storage PGL (Partner Growth Lead).
+
+February 2026 report data:
+- PPC: ROAS 656% (↑20.5%), cost/rental $228.51 (↓17% — a meaningful win), rentals 66.6 (↑41%), spend $15,218, CTR 2.57% (↑58%), 106 missed calls out of 240 total, online rentals 27 (↑93%), impressions 82,211 (↓31%)
+- SEO: ROI 926%, $96k revenue, 64 rentals (↑49%), 4,960 sessions (↑158%), 236 rankings (↑18%)
+- Top performers: Settlers Landing ROAS 1,189%, Knightdale ROAS 881%, Pittsboro/Harrisburg #1 SEO, Concord #1-3 SEO
+- Problems: Fuquay-Varina ROAS 236% ($634/rental), Chapel Hill SEO ↓21%, Clayton SEO dropped significantly
+
+RULES:
+- You are the PARTNER receiving help — not an assistant. Stay fully in character.
+- 2-3 sentences of natural spoken dialogue. No lists, no formatting.
+- Push back if vague, jargon-heavy without explanation, or generic.
+- Acknowledge good specific answers briefly, then probe deeper or move on.
+- Never break character or add meta-commentary.`;
+
+  const userContent = `Recent conversation:\n${recent}\n\nThe PGL just said: "${text}"${inject?`\n\nAfter responding naturally, work in: "${inject}"`:''}`;
+
+  try {
+    const res  = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:300,system,messages:[{role:'user',content:userContent}]})});
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message||JSON.stringify(data.error));
+    const reply = (data.content?.[0]?.text||'').trim() || 'Can you say that again?';
+    setTyping(false);
+    addMsg('partner', p.name, reply);
+    setStatus('ready', S.useMic ? 'Ready — click the mic to speak' : 'Ready — type your response');
+  } catch(err) {
+    setTyping(false);
+    addMsg('partner', p.name, 'Sorry, can you repeat that?');
+    setStatus('ready','Ready');
+    console.error('API error:',err);
+  }
+
+  S.busy=false;
+  q('mic-btn').disabled=false;
+}
+
+// ─── TEXT SEND ────────────────────────────────────────────────────────────────
+function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText();} }
+function sendText(){
+  const v = q('tinput').value.trim();
+  if(!v||S.busy) return;
+  q('tinput').value='';
+  if(S.recogOn) try{S.recog.stop();}catch(e){}
+  processInput(v);
+}
+
+// ─── TTS — called directly from button click so browser allows it ─────────────
+function playSpeech(text, btn) {
+  if(!('speechSynthesis' in window)) return;
+  if(window.speechSynthesis.speaking){ window.speechSynthesis.cancel(); btn.classList.remove('playing'); btn.innerHTML='▶ Play response'; return; }
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate=0.92; u.pitch=1; u.volume=1;
+  const voices = window.speechSynthesis.getVoices();
+  const pref = voices.find(v=>v.name==='Samantha'||v.name==='Karen'||v.name==='Google US English'||(v.lang==='en-US'&&v.localService)) || voices.find(v=>v.lang?.startsWith('en'));
+  if(pref) u.voice=pref;
+  btn.classList.add('playing'); btn.innerHTML='⏹ Stop';
+  u.onend = u.onerror = ()=>{ btn.classList.remove('playing'); btn.innerHTML='▶ Play response'; };
+  window.speechSynthesis.speak(u);
+}
+
+// ─── MESSAGES ────────────────────────────────────────────────────────────────
+function addMsg(type, sender, text) {
+  const chat = q('chat');
+  const d = document.createElement('div');
+  d.className = `msg ${type}`;
+
+  if(type==='sys'||type==='hint') {
+    d.innerHTML = `<div class="bubble">${text}</div>`;
+  } else if(type==='partner') {
+    d.innerHTML = `<div class="msg-from">${sender}</div><div class="bubble">${text}</div>`;
+    // Speak button — only if TTS enabled
+    if(S.useTts && 'speechSynthesis' in window) {
+      const btn = document.createElement('button');
+      btn.className='speak-btn';
+      btn.innerHTML='▶ Play response';
+      const captured = text;
+      btn.onclick = function(){ playSpeech(captured, this); };
+      d.appendChild(btn);
+    }
+  } else {
+    d.innerHTML = `<div class="msg-from">${sender}</div><div class="bubble">${text}</div>`;
+  }
+
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+  if(type!=='sys'&&type!=='hint') S.msgs.push({type,sender,text});
+}
+
+function setTyping(on) {
+  let t = document.getElementById('typing-indicator');
+  if(on && !t) {
+    t = document.createElement('div');
+    t.id='typing-indicator'; t.className='typing-wrap';
+    t.innerHTML=`<div class="msg-from">${gp()?.name||'Partner'}</div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    q('chat').appendChild(t);
+    q('chat').scrollTop=q('chat').scrollHeight;
+  } else if(!on && t) { t.remove(); }
+}
+
+// ─── HINT ────────────────────────────────────────────────────────────────────
+async function getHint() {
+  const pMsgs = S.msgs.filter(m=>m.type==='partner');
+  if(!pMsgs.length){ toast('Have at least one exchange first'); return; }
+  const last = pMsgs[pMsgs.length-1];
+  try {
+    const res = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:130,messages:[{role:'user',content:`A Marketing.Storage PGL is practicing a ${CTXS[S.ctx]} call with a Tier ${S.tier} partner (${S.tier==1?'enterprise, strategic, high-standards':S.tier==2?'growing 9-location operator, practical':'single-facility owner, skeptical, needs plain language'}).\n\nPartner just said: "${last.text}"\n\nReport data: ROAS 656%, cost/rental $228 (↓17%), rentals ↑41%, 106 missed calls, SEO sessions ↑158%, Fuquay-Varina ROAS 236% ($634/rental), Clayton/Chapel Hill SEO dropped, Knightdale 881%, Settlers Landing 1,189%.\n\nGive ONE specific actionable coaching tip for responding to exactly what the partner said. Reference a specific data point. Max 2 sentences. Start with 💡`}]})});
+    const data=await res.json();
+    addMsg('hint','Coach',data.content?.[0]?.text||'💡 Reference a specific data point from the report that directly answers their concern.');
+  } catch(e){ addMsg('hint','Coach','💡 Use a specific number from the report that answers their concern directly.'); }
+}
+
+// ─── REPORT ──────────────────────────────────────────────────────────────────
+function showReport() {
+  const r=REPORT;
+  addMsg('sys','',
+    `<b>📊 February 2026 — Quick Reference</b><br><br>`+
+    `<b>PPC:</b> ${r.ppc.clicks.toLocaleString()} clicks · CTR ${r.ppc.ctr} (↑${r.ppc.ctrChg}%) · Spend ${r.ppc.cost} · ROAS ${r.ppc.roas} (↑${r.ppc.roasChg}%) · Cost/rental ${r.ppc.cpr} (<b>↓${Math.abs(r.ppc.cprChg)}% ✓</b>) · Rentals ${r.ppc.rentals} (↑${r.ppc.rentalsChg}%) · Online rentals ${r.ppc.onlineRentals} (↑${r.ppc.onlineChg}%)<br><br>`+
+    `<b>Calls:</b> ${r.ppc.totalCalls} total · <b>${r.ppc.missedCalls} missed ⚠</b><br><br>`+
+    `<b>SEO:</b> ${r.seo.sessions.toLocaleString()} sessions (↑${r.seo.sessionsChg}%) · ${r.seo.rentals} rentals (↑${r.seo.rentalsChg}%) · ${r.seo.rankings} rankings (↑${r.seo.rankingsChg}%) · ROI ${r.seo.roi}<br><br>`+
+    `<b>⚠ Watch:</b> Fuquay-Varina ROAS 236% ($634/rental) · Chapel Hill SEO ↓21% · Clayton SEO dropped<br><br>`+
+    `<b>By location:</b><br>`+r.locs.map(l=>`<b>${l.n}:</b> ROAS ${l.roas} · ${l.cpr}/rental`).join('<br>')
+  );
+}
+
+// ─── END CALL ────────────────────────────────────────────────────────────────
+async function endCall() {
+  const pglMsgs = S.msgs.filter(m=>m.type==='pgl');
+  if(pglMsgs.length<2){ toast('Have at least 2 responses before ending'); return; }
+  if(S.recogOn) try{S.recog.stop();}catch(e){}
+  window.speechSynthesis?.cancel();
+  stopWave(); showScreen('debrief');
+
+  // Build transcript display
+  q('ts-scroll').innerHTML = S.msgs.filter(m=>m.type==='pgl'||m.type==='partner').map(m=>`<div class="tline"><strong>${m.sender}:</strong> ${m.text}</div>`).join('');
+
+  const ts = S.msgs.filter(m=>m.type==='pgl'||m.type==='partner').map(m=>`${m.sender}: ${m.text}`).join('\n');
+
+  try {
+    const res = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,messages:[{role:'user',content:`Evaluate a Marketing.Storage PGL on their practice partner call.\n\nPartner: Tier ${S.tier} (${S.tier==1?'enterprise, 140+ facilities, expects strategic insight and proactive recommendations':S.tier==2?'growing operator ~10 locations, practical, ROI-focused, wants clear action items':'single-facility small business owner, price-sensitive, skeptical, needs plain English'})\nCall type: ${CTXS[S.ctx]}\n\nTranscript:\n${ts}\n\nAvailable data the PGL could have used: ROAS 656% (↑20.5%), cost/rental $228 (↓17% — key win to highlight proactively), rentals ↑41%, spend $15,218, 106 missed calls, SEO sessions ↑158%, Fuquay-Varina ROAS 236% ($634/rental — underperformer), Clayton/Chapel Hill SEO dropped, Settlers Landing 1,189%, Knightdale 881%.\n\nScore 0–100 on: specific data usage, communication style fit for tier (no jargon for T3, strategic for T1), objection handling, proactivity (did they surface missed calls or Fuquay-Varina before being asked?), trust-building.\n\nReturn ONLY raw JSON, no markdown:\n{"score":78,"title":"Solid call with good data usage","wins":["Specific win referencing what the PGL actually said","Another concrete win"],"grows":["Specific gap with a concrete suggestion","Another area to work on"]}`}]})});
+    const data=await res.json();
+    const m=(data.content?.[0]?.text||'{}').match(/\{[\s\S]*\}/);
+    const fb=JSON.parse(m?m[0]:'{}');
+    q('d-score').textContent=fb.score??'—';
+    q('d-title').textContent=fb.title||'Call complete';
+    q('d-sub').textContent=`${pglMsgs.length} responses · Tier ${S.tier} · ${CTXS[S.ctx]}`;
+    q('wins-list').innerHTML=(fb.wins||[]).map(w=>`<div class="fb-item">${w}</div>`).join('')||'<div class="fb-item">Practice with more exchanges for detailed feedback</div>';
+    q('grows-list').innerHTML=(fb.grows||[]).map(g=>`<div class="fb-item">${g}</div>`).join('')||'<div class="fb-item">Review the transcript below</div>';
+  } catch(e){
+    q('d-score').textContent='—'; q('d-title').textContent='Call complete';
+    q('d-sub').textContent=`${pglMsgs.length} responses · ${CTXS[S.ctx]}`;
+    q('wins-list').innerHTML='<div class="fb-item">Could not analyze — check your connection</div>';
+    q('grows-list').innerHTML='<div class="fb-item">Try again with a longer conversation</div>';
+  }
+}
+
+function retry()    { showScreen('call'); startCall(); }
+function newSetup() { window.speechSynthesis?.cancel(); showScreen('setup'); }
+
+// ─── WAVEFORM ────────────────────────────────────────────────────────────────
+function buildWave() {
+  const wf=q('waveform'); wf.innerHTML='';
+  for(let i=0;i<48;i++){ const b=document.createElement('div'); b.className='wb'; b.style.flex='1'; wf.appendChild(b); }
+}
+function startWave(){
+  const bars=document.querySelectorAll('.wb');
+  function f(){ bars.forEach(b=>{b.style.height=Math.random()*20+3+'px';b.style.background='var(--green)';}); S.wavTimer=setTimeout(f,65); }
+  f();
+}
+function stopWave(){
+  clearTimeout(S.wavTimer);
+  document.querySelectorAll('.wb').forEach(b=>{b.style.height='3px';b.style.background='var(--bg5)';});
+}
+
+// ─── STATUS / UI ──────────────────────────────────────────────────────────────
+function setStatus(state, text) {
+  const dot=q('sdot');
+  dot.className='sdot'+(state==='ready'?'':' '+state);
+  q('stext').textContent=text;
+  if(state!=='listening') q('strans').textContent='';
+}
+function showWarn(msg){ const w=q('vwarn'); w.textContent=msg; w.style.display='block'; }
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); q(id).classList.add('active'); }
+function show(id){ q(id).style.display='block'; }
+function hide(id){ q(id).style.display='none'; }
+function q(id)  { return document.getElementById(id); }
+function qa(sel){ return document.querySelectorAll(sel); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a; }
+function toast(msg){ const t=q('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600); }
+
+// Preload voices
+if('speechSynthesis' in window){ window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices(); }
+</script>
+</body>
+</html>
